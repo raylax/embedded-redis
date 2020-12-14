@@ -12,7 +12,7 @@ public class SimpleDynamicString {
     /**
      * 最大预留空间为1M
      */
-    private static final int MAX_FREE = Constants.BYTES_MB / Character.SIZE;
+    private static final int MAX_FREE = Constants.BYTES_MB / Character.BYTES;
 
     /**
      * 最大容量

@@ -61,7 +61,7 @@ public class SimpleDynamicStringTest {
         assertEquals("sds hello!", sds.toString());
         char[] data = new char[Constants.BYTES_MB];
         sds.concat(data);
-        assertEquals(Constants.BYTES_MB / Character.SIZE, sds.available());
+        assertEquals(Constants.BYTES_MB / Character.BYTES, sds.available());
     }
 
     @Test
