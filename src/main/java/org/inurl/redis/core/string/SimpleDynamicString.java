@@ -15,6 +15,11 @@ public class SimpleDynamicString {
     private static final int MAX_FREE = Constants.BYTES_MB / Character.SIZE;
 
     /**
+     * 最大容量
+     */
+    public static final int MAX_CAPACITY = 512 * Constants.BYTES_MB / Character.SIZE;
+
+    /**
      * 空buf
      */
     private static final char[] EMPTY_BUF = new char[0];
@@ -158,6 +163,11 @@ public class SimpleDynamicString {
         this.free = 0;
     }
 
+    /**
+     * 比较是否相等
+     * @param other 另一个sds
+     * @return 是否相等
+     */
     public boolean compare(SimpleDynamicString other) {
         int length = this.len;
         if (length != other.len) {
@@ -169,6 +179,15 @@ public class SimpleDynamicString {
             }
         }
         return true;
+    }
+
+    /**
+     * 检查长度
+     * @param length 长度
+     * @return 是否超过最大长度
+     */
+    public static boolean checkLength(int length) {
+        return length > MAX_CAPACITY;
     }
 
     /*
@@ -190,14 +209,14 @@ public class SimpleDynamicString {
      * 确保容量
      */
     private void ensureCapacity(int expectCapacity) {
-        int actualCapacity = expectCapacity < MAX_FREE
+        int capacity = expectCapacity < MAX_FREE
                 ? expectCapacity * 2 // 如果实际长度小于1M扩容至二倍
                 : expectCapacity + MAX_FREE; // 否则扩容至实际长度+1M
         int len = this.len;
-        char[] newBuf = new char[actualCapacity];
+        char[] newBuf = new char[capacity];
         System.arraycopy(this.buf, 0, newBuf, 0, len);
         this.buf = newBuf;
-        this.free = actualCapacity - len;
+        this.free = capacity - len;
     }
 
     @Override
