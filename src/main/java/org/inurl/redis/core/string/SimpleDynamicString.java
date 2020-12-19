@@ -197,7 +197,7 @@ public class SimpleDynamicString {
         if (length == 0) {
             return;
         }
-        if (available() < length) {
+        if (free < length) {
             ensureCapacity(this.len + length);
         }
         System.arraycopy(data, 0, this.buf, this.len, length);
