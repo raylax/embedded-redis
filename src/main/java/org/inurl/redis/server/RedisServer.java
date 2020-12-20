@@ -10,9 +10,10 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.redis.RedisArrayAggregator;
 import io.netty.handler.codec.redis.RedisDecoder;
 import io.netty.handler.codec.redis.RedisEncoder;
+import org.inurl.redis.server.codec.RedisAggregator;
+import org.inurl.redis.server.codec.RedisCommandProcessor;
 import org.inurl.redis.uitl.Log;
 
 import java.net.InetSocketAddress;
@@ -53,6 +54,7 @@ public class RedisServer {
             bossGroup = new NioEventLoopGroup();
             workerGroup = new NioEventLoopGroup();
             ServerBootstrap bootstrap = new ServerBootstrap();
+            RedisCommandProcessor redisCommandProcessor = new RedisCommandProcessor();
             bootstrap.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .option(ChannelOption.SO_BACKLOG, SO_BACKLOG_VALUE)
@@ -63,8 +65,8 @@ public class RedisServer {
                         protected void initChannel(SocketChannel ch) {
                             ChannelPipeline pipeline = ch.pipeline();
                             pipeline.addLast(new RedisDecoder());
-                            pipeline.addLast(new RedisArrayAggregator());
-                            pipeline.addLast(new CommandHandler());
+                            pipeline.addLast(new RedisAggregator());
+                            pipeline.addLast(redisCommandProcessor);
                             pipeline.addLast(new RedisEncoder());
                         }
                     });
