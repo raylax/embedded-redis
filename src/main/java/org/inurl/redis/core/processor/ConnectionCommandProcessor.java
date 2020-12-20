@@ -3,6 +3,7 @@ package org.inurl.redis.core.processor;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.redis.ErrorRedisMessage;
 import io.netty.handler.codec.redis.SimpleStringRedisMessage;
+import org.inurl.redis.core.Constants;
 import org.inurl.redis.server.codec.RedisCommand;
 import org.inurl.redis.server.codec.RedisUtil;
 
@@ -38,6 +39,7 @@ public class ConnectionCommandProcessor implements CommandProcessor {
                 ctx.write(new SimpleStringRedisMessage(content));
                 return;
             case "QUIT":
+                ctx.writeAndFlush(Constants.REDIS_MESSAGE_OK);
                 ctx.close();
                 return;
         }
