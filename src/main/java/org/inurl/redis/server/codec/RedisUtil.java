@@ -1,7 +1,8 @@
 package org.inurl.redis.server.codec;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * @author raylax
@@ -9,10 +10,7 @@ import io.netty.buffer.ByteBufHolder;
 public class RedisUtil {
 
     public static String toString(ByteBufHolder holder) {
-        ByteBuf buf = holder.content();
-        byte[] bytes = new byte[buf.readableBytes()];
-        buf.readBytes(bytes);
-        return new String(bytes);
+        return holder.content().toString(UTF_8);
     }
 
 }
