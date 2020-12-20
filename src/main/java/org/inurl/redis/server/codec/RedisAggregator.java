@@ -20,8 +20,8 @@ public class RedisAggregator extends MessageToMessageDecoder<RedisMessage> {
     }
 
     private State state;
-    private AggregatedRedisMessage message;
-    private AggregatedRedisMessage.Parameter parameter;
+    private RedisCommand message;
+    private RedisCommand.Parameter parameter;
     private long parameters;
     private long totalParameters;
 
@@ -42,33 +42,35 @@ public class RedisAggregator extends MessageToMessageDecoder<RedisMessage> {
 
     private void handleArrayHeaderRedisMessage(ArrayHeaderRedisMessage message) {
         this.totalParameters = message.length() - 1;
-        this.message = new AggregatedRedisMessage(this.totalParameters);
+        this.message = new RedisCommand(this.totalParameters);
         this.state = State.DECODE_COMMAND;
     }
 
     private void handleBulkStringHeaderRedisMessage(BulkStringHeaderRedisMessage message) {
         if (state == State.DECODE_ARGS) {
-            this.parameter = new AggregatedRedisMessage.Parameter(message.bulkStringLength());
+            this.parameter = new RedisCommand.Parameter(message.bulkStringLength());
         }
     }
 
     private void handleBulkStringRedisContent(BulkStringRedisContent content, List<Object> out) {
         switch (state) {
             case DECODE_COMMAND:
-                this.message.setCommand(RedisUtil.toString(content));
+                String name = RedisUtil.toString(content);
+                this.message.setName(name.toUpperCase());
                 this.state = State.DECODE_ARGS;
                 break;
             case DECODE_ARGS:
-                this.parameter.setHolder(content);
+                this.parameter.setHolder(content.retain());
                 this.message.addParameter(this.parameter);
                 this.parameter = null;
                 this.parameters++;
-                if (this.totalParameters == this.parameters) {
-                    out.add(this.message);
-                    reset();
-                }
             default:
                 // NOOP
+        }
+
+        if (this.totalParameters == 0 || this.totalParameters == this.parameters) {
+            out.add(this.message);
+            reset();
         }
     }
 
@@ -76,6 +78,8 @@ public class RedisAggregator extends MessageToMessageDecoder<RedisMessage> {
         this.state = State.DECODE_COMMAND;
         this.message = null;
         this.parameter = null;
+        this.totalParameters = 0;
+        this.parameters = 0;
     }
 
 }

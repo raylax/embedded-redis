@@ -9,13 +9,13 @@ import java.util.List;
 /**
  * @author raylax
  */
-public class AggregatedRedisMessage {
+public class RedisCommand {
 
-    private String command;
+    private String name;
 
     private final List<Parameter> parameters;
 
-    AggregatedRedisMessage(long parameters) {
+    RedisCommand(long parameters) {
         if (parameters < 1) {
             this.parameters = Collections.emptyList();
             return;
@@ -23,23 +23,23 @@ public class AggregatedRedisMessage {
         this.parameters = new ArrayList<>((int) parameters);
     }
 
-    public void setCommand(String command) {
-        this.command = command;
+    public void setName(String name) {
+        this.name = name;
     }
 
     void addParameter(Parameter parameter) {
         parameters.add(parameter);
     }
 
-    public String command() {
-        return command;
+    public String name() {
+        return name;
     }
 
     public List<Parameter> parameters() {
         return parameters;
     }
 
-    static class Parameter {
+    public static class Parameter {
         private final int length;
         private ByteBufHolder holder;
 

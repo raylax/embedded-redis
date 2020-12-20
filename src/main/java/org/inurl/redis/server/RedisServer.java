@@ -12,8 +12,11 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.redis.RedisDecoder;
 import io.netty.handler.codec.redis.RedisEncoder;
+import org.apache.log4j.BasicConfigurator;
+import org.inurl.redis.core.processor.CommandProcessorRegistry;
+import org.inurl.redis.core.processor.ConnectionCommandProcessor;
 import org.inurl.redis.server.codec.RedisAggregator;
-import org.inurl.redis.server.codec.RedisCommandProcessor;
+import org.inurl.redis.server.codec.RedisCommandHandler;
 import org.inurl.redis.uitl.Log;
 
 import java.net.InetSocketAddress;
@@ -49,12 +52,13 @@ public class RedisServer {
     }
 
     public void start() {
+        BasicConfigurator.configure();
         Log.info("starting server");
         try {
             bossGroup = new NioEventLoopGroup();
             workerGroup = new NioEventLoopGroup();
             ServerBootstrap bootstrap = new ServerBootstrap();
-            RedisCommandProcessor redisCommandProcessor = new RedisCommandProcessor();
+            RedisCommandHandler redisCommandProcessor = new RedisCommandHandler(buildProcessorRegistry());
             bootstrap.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .option(ChannelOption.SO_BACKLOG, SO_BACKLOG_VALUE)
@@ -64,10 +68,10 @@ public class RedisServer {
                         @Override
                         protected void initChannel(SocketChannel ch) {
                             ChannelPipeline pipeline = ch.pipeline();
-                            pipeline.addLast(new RedisDecoder());
+                            pipeline.addLast(new RedisDecoder(false));
+                            pipeline.addLast(new RedisEncoder());
                             pipeline.addLast(new RedisAggregator());
                             pipeline.addLast(redisCommandProcessor);
-                            pipeline.addLast(new RedisEncoder());
                         }
                     });
             ChannelFuture future = bootstrap.bind(bindAddress).sync();
@@ -78,6 +82,12 @@ public class RedisServer {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
         }
+    }
+
+    private CommandProcessorRegistry buildProcessorRegistry() {
+        CommandProcessorRegistry processorRegistry = new CommandProcessorRegistry();
+        processorRegistry.register(new ConnectionCommandProcessor());
+        return processorRegistry;
     }
 
     public void stop() {
