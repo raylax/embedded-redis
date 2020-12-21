@@ -7,6 +7,7 @@ import lombok.Getter;
 import org.inurl.redis.server.codec.RedisCommand;
 
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -32,12 +33,80 @@ public class CommandUtil {
         if (parameterFields.size() > 0 && parameters.isEmpty()) {
             throw new RedisCodecException("ERR wrong number of arguments for '" + redisCommand.name() + "' command");
         }
-        for (ParameterField parameterField : parameterFields) {
 
+        T instance = newInstance(clazz);
+        int i = 0;
+        for (ParameterField parameterField : parameterFields) {
+            ParameterField.Type type = parameterField.type;
+            boolean enough = isEnough(i, parameters, type);
+            if (!enough && type == VALUE) {
+                throw new RedisCodecException("ERR syntax error");
+            }
+            boolean parsed = false;
+            switch (type) {
+                case VALUE:
+                    parsed = parseValue(instance, parameterField, parameters.get(i));
+                    break;
+                case OPTIONAL:
+                    break;
+                case ENUM:
+                    break;
+                case REQUIRED_ENUM:
+                    break;
+                default:
+                    throw new IllegalStateException();
+            }
+            if (parsed) {
+                i += type.parameterCount;
+            }
         }
-        return null;
+
+        return instance;
     }
 
+    // 仅支持 long,int,float,double四种基本类型和stirng的解析
+    private static boolean parseValue(Object instance, ParameterField parameterField, RedisCommand.Parameter parameter) {
+        Field field = parameterField.field;
+        Class<?> type = field.getType();
+        ByteBuf buf = parameter.getHolder().content();
+        String str = buf.toString(StandardCharsets.UTF_8);
+        Object val = str;
+        try {
+            if (type == long.class) {
+                val = Long.parseLong(str);
+            } else if (type == int.class) {
+                val = Integer.parseInt(str);
+            } else if (type == float.class) {
+                val = Float.parseFloat(str);
+            } else if (type == double.class) {
+                val = Double.parseDouble(str);
+            }
+        } catch (Exception ex) {
+            return false;
+        }
+        setValue(field, instance, val);
+        return true;
+    }
+
+    private static void setValue(Field field, Object obj, Object val) {
+        try {
+            field.set(obj, val);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private static <T> T newInstance(Class<T> clazz) {
+        try {
+            return clazz.newInstance();
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private static boolean isEnough(int i, List<RedisCommand.Parameter> parameters, ParameterField.Type type) {
+        return parameters.size() - i >= type.parameterCount;
+    }
 
     private static List<ParameterField> makeParameterFields(Class<?> clazz) {
         List<Field> fields = getFields(clazz);
@@ -138,17 +207,20 @@ public class CommandUtil {
         }
 
         enum Type {
-            VALUE(true),
-            OPTIONAL(false),
-            ENUM(false),
-            REQUIRED_ENUM(false),
+            VALUE(true, 1),
+            OPTIONAL(false, 2),
+            ENUM(false, 1),
+            REQUIRED_ENUM(false, 1),
             ;
 
             @Getter
             private final boolean required;
+            @Getter
+            private final int parameterCount;
 
-            Type(boolean required) {
+            Type(boolean required, int parameterCount) {
                 this.required = required;
+                this.parameterCount = parameterCount;
             }
         }
     }
