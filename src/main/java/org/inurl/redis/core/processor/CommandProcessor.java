@@ -18,6 +18,11 @@ public interface CommandProcessor {
     /**
      * 处理请求
      */
-    void process(RedisCommand command, ChannelHandlerContext ctx);
+    default void process(RedisCommand command, ChannelHandlerContext ctx) {
+        process0(command, ctx);
+        command.release();
+    }
+
+    void process0(RedisCommand command, ChannelHandlerContext ctx);
 
 }

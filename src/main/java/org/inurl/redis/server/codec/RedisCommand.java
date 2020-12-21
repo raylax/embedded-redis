@@ -15,7 +15,7 @@ public class RedisCommand {
 
     private final List<Parameter> parameters;
 
-    RedisCommand(long parameters) {
+    public RedisCommand(long parameters) {
         if (parameters < 1) {
             this.parameters = Collections.emptyList();
             return;
@@ -27,7 +27,7 @@ public class RedisCommand {
         this.name = name;
     }
 
-    void addParameter(Parameter parameter) {
+    public void addParameter(Parameter parameter) {
         parameters.add(parameter);
     }
 
@@ -56,6 +56,12 @@ public class RedisCommand {
 
         public int getLength() {
             return length;
+        }
+    }
+
+    public void release() {
+        for (Parameter parameter : parameters) {
+            parameter.holder.release();
         }
     }
 

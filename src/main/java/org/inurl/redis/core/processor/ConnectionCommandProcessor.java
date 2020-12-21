@@ -21,7 +21,7 @@ public class ConnectionCommandProcessor implements CommandProcessor {
     }
 
     @Override
-    public void process(RedisCommand command, ChannelHandlerContext ctx) {
+    public void process0(RedisCommand command, ChannelHandlerContext ctx) {
         switch (command.name()) {
             case "COMMAND":
                 ctx.write(new ErrorRedisMessage("unsupported command"));

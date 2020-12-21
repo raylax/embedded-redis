@@ -27,4 +27,5 @@ public class Constants {
 
     public static final RedisMessage REDIS_MESSAGE_OK = new SimpleStringRedisMessage("OK");
 
+
 }
