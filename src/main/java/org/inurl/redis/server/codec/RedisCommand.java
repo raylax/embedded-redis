@@ -12,8 +12,14 @@ import java.util.List;
  */
 public class RedisCommand {
 
+    /**
+     * 命令名
+     */
     private String name;
 
+    /**
+     * 参数
+     */
     private final List<Parameter> parameters;
 
     public RedisCommand(long parameters) {
@@ -41,10 +47,26 @@ public class RedisCommand {
     }
 
     public static class Parameter {
+
+        /**
+         * 参数长度
+         */
         private final int length;
+
+        /**
+         * byteBuf
+         */
         private ByteBufHolder holder;
+
+        /**
+         * 是否已释放
+         */
         private boolean released = false;
-        private String stringHolder;
+
+        /**
+         * string缓存
+         */
+        private String stringCache;
 
         public Parameter(int length) {
             this.length = length;
@@ -69,12 +91,12 @@ public class RedisCommand {
         }
 
         public String string() {
-            if (this.stringHolder != null) {
-                return this.stringHolder;
+            if (this.stringCache != null) {
+                return this.stringCache;
             }
-            this.stringHolder = holder.content().toString(StandardCharsets.UTF_8);
+            this.stringCache = holder.content().toString(StandardCharsets.UTF_8);
             release();
-            return this.stringHolder;
+            return this.stringCache;
         }
     }
 

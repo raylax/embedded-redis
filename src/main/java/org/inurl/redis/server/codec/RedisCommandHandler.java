@@ -4,6 +4,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.redis.ErrorRedisMessage;
+import io.netty.handler.codec.redis.RedisCodecException;
 import org.inurl.redis.core.processor.CommandProcessor;
 import org.inurl.redis.core.processor.CommandProcessorRegistry;
 
@@ -26,7 +27,11 @@ public class RedisCommandHandler extends SimpleChannelInboundHandler<RedisComman
             ctx.writeAndFlush(new ErrorRedisMessage("unsupported command [" + command.name() + "]"));
             return;
         }
-        processor.process(command, ctx);
+        try {
+            processor.process(command, ctx);
+        } catch (RedisCodecException ex) {
+            ctx.write(new ErrorRedisMessage(ex.getMessage()));
+        }
         ctx.flush();
     }
 

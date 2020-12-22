@@ -9,7 +9,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class SetCommand extends AbstractCommand {
+public class TestSetCommand extends AbstractCommand {
 
     @CommandParameter(order = 1)
     private ByteBuf value;
@@ -17,11 +17,13 @@ public class SetCommand extends AbstractCommand {
     @CommandParameter(order = 2)
     private LongOptionalCommandParameter ex;
 
-    @CommandParameter(order = 3)
-    private LongOptionalCommandParameter px;
+    @CommandParameter(value = "px", order = 3)
+    private LongOptionalCommandParameter px1;
 
     @CommandParameter(order = 4, enumClass = When.class)
     private EnumCommandParameter<When> when;
+
+    private int xxx;
 
     public enum When {
         NX,

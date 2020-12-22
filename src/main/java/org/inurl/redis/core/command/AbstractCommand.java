@@ -10,6 +10,9 @@ import lombok.Setter;
 @Getter
 public class AbstractCommand implements Command {
 
+    /**
+     * key
+     */
     @CommandParameter(order = -1)
     private String key;
 

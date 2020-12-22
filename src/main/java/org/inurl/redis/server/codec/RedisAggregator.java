@@ -68,6 +68,7 @@ public class RedisAggregator extends MessageToMessageDecoder<RedisMessage> {
                 // NOOP
         }
 
+        // 如果没有参数或参数已经足够向后发送数据
         if (this.totalParameters == 0 || this.totalParameters == this.parameters) {
             out.add(this.message);
             reset();
