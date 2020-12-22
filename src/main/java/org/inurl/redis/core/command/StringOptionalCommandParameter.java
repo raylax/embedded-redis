@@ -9,8 +9,8 @@ public class StringOptionalCommandParameter extends OptionalCommandParameter<Str
         super(present);
     }
 
-    public StringOptionalCommandParameter(boolean present, String value) {
-        super(present, value);
+    public StringOptionalCommandParameter(String value) {
+        super(value);
     }
 
 }

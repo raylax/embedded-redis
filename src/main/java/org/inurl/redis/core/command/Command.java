@@ -5,6 +5,6 @@ package org.inurl.redis.core.command;
  */
 public interface Command {
 
-    String key();
+    String getKey();
 
 }

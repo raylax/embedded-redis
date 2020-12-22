@@ -2,6 +2,7 @@ package org.inurl.redis.server.codec;
 
 import io.netty.buffer.ByteBufHolder;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -42,6 +43,8 @@ public class RedisCommand {
     public static class Parameter {
         private final int length;
         private ByteBufHolder holder;
+        private boolean released = false;
+        private String stringHolder;
 
         public Parameter(int length) {
             this.length = length;
@@ -57,11 +60,27 @@ public class RedisCommand {
         public int getLength() {
             return length;
         }
+
+        public void release() {
+            if (!released && holder.refCnt() > 0) {
+                holder.release();
+                released = true;
+            }
+        }
+
+        public String string() {
+            if (this.stringHolder != null) {
+                return this.stringHolder;
+            }
+            this.stringHolder = holder.content().toString(StandardCharsets.UTF_8);
+            release();
+            return this.stringHolder;
+        }
     }
 
     public void release() {
         for (Parameter parameter : parameters) {
-            parameter.holder.release();
+            parameter.release();
         }
     }
 

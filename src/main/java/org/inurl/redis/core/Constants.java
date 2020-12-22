@@ -1,5 +1,6 @@
 package org.inurl.redis.core;
 
+import io.netty.handler.codec.redis.RedisCodecException;
 import io.netty.handler.codec.redis.RedisMessage;
 import io.netty.handler.codec.redis.SimpleStringRedisMessage;
 
@@ -27,5 +28,6 @@ public class Constants {
 
     public static final RedisMessage REDIS_MESSAGE_OK = new SimpleStringRedisMessage("OK");
 
+    public static final RedisCodecException SYNTAX_ERROR = new RedisCodecException("syntax error");
 
 }

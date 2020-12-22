@@ -1,12 +1,12 @@
 package org.inurl.redis.core.command;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.redis.RedisCodecException;
 import lombok.Getter;
 import org.inurl.redis.server.codec.RedisCommand;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,7 +14,9 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
+import static org.inurl.redis.core.Constants.SYNTAX_ERROR;
 import static org.inurl.redis.core.command.CommandUtil.ParameterField.Type.ENUM;
 import static org.inurl.redis.core.command.CommandUtil.ParameterField.Type.OPTIONAL;
 import static org.inurl.redis.core.command.CommandUtil.ParameterField.Type.REQUIRED_ENUM;
@@ -25,7 +27,10 @@ import static org.inurl.redis.core.command.CommandUtil.ParameterField.Type.VALUE
  */
 public class CommandUtil {
 
-    private static final Map<Class<?>, List<ParameterField>> FIELDS_CACHE = new HashMap<>();
+    private static final Object NONE = new Object();
+    private static final Map<Class<?>, List<ParameterField>> FIELDS_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Field, Method> SETTER_CACHE = new ConcurrentHashMap<>();
+    private static final Map<Class<?>, Map<String, Object>> ENUM_CACHE = new ConcurrentHashMap<>();
 
     public static <T extends Command> T parse(RedisCommand redisCommand, Class<T> clazz) {
         List<ParameterField> parameterFields = FIELDS_CACHE.computeIfAbsent(clazz, CommandUtil::makeParameterFields);
@@ -38,20 +43,27 @@ public class CommandUtil {
         int i = 0;
         for (ParameterField parameterField : parameterFields) {
             ParameterField.Type type = parameterField.type;
-            boolean enough = isEnough(i, parameters, type);
-            if (!enough && type == VALUE) {
-                throw new RedisCodecException("ERR syntax error");
+            int rights = parameters.size() - i - type.parameterCount;
+            if (rights < 0) {
+                //                       处理optional单个参数问题
+                if (type.isRequired() || (rights == -1 && type == OPTIONAL)) {
+                    throw SYNTAX_ERROR;
+                }
+                continue;
             }
-            boolean parsed = false;
+            boolean parsed;
             switch (type) {
                 case VALUE:
                     parsed = parseValue(instance, parameterField, parameters.get(i));
                     break;
                 case OPTIONAL:
+                    parsed = parseOptionalValue(instance, parameterField, parameters.get(i), parameters.get(i + 1));
                     break;
                 case ENUM:
+                    parsed = parseEnumValue(instance, parameterField, parameters.get(i), false);
                     break;
                 case REQUIRED_ENUM:
+                    parsed = parseEnumValue(instance, parameterField, parameters.get(i), true);
                     break;
                 default:
                     throw new IllegalStateException();
@@ -64,15 +76,92 @@ public class CommandUtil {
         return instance;
     }
 
-    // 仅支持 long,int,float,double四种基本类型和stirng的解析
-    private static boolean parseValue(Object instance, ParameterField parameterField, RedisCommand.Parameter parameter) {
+    private static boolean parseEnumValue(Object instance, ParameterField parameterField,
+                                          RedisCommand.Parameter parameter, boolean required) {
+        String val = parameter.string().toUpperCase();
+        Object enumVal = getEnumVal(parameterField.enumClass, val);
+        EnumCommandParameter<?> ecp = newInstance(EnumCommandParameter.class);
+        ecp.setValue(enumVal);
+        if (!ecp.isPresent() && required) {
+            throw SYNTAX_ERROR;
+        }
+        setValue(parameterField.field, instance, ecp);
+        return ecp.isPresent();
+    }
+
+    private static Object getEnumVal(Class<?> clazz, String val) {
+        Map<String, Object> classCache = ENUM_CACHE.get(clazz);
+        if (classCache == null) {
+            Object enumVal = getEnumVal0(clazz, val);
+            classCache = new HashMap<>();
+            classCache.put(val, enumVal == null ? NONE : enumVal);
+            ENUM_CACHE.put(clazz, classCache);
+            return enumVal;
+        }
+        Object enumCache = classCache.get(val);
+        if (enumCache == null) {
+            Object enumVal = getEnumVal0(clazz, val);
+            classCache.put(val, enumVal == null ? NONE : enumVal);
+            return enumVal;
+        }
+        return enumCache == NONE ? null : enumCache;
+    }
+
+    private static Object getEnumVal0(Class<?> clazz, String val) {
+        Enum<?>[] enums = (Enum<?>[]) clazz.getEnumConstants();
+        for (Enum<?> e : enums) {
+            if (e.name().equals(val)) {
+                return e;
+            }
+        }
+        return null;
+    }
+
+    private static boolean parseOptionalValue(
+            Object instance, ParameterField parameterField,
+            RedisCommand.Parameter parameterName, RedisCommand.Parameter parameterValue) {
+        Field field = parameterField.field;
+        if (!parameterField.name.equalsIgnoreCase(parameterName.string())) {
+            setValue(field, instance, OptionalCommandParameter.absent());
+            return false;
+        }
+        Class<?> type = field.getType();
+        String value = parameterValue.string();
+        OptionalCommandParameter<?> val;
+        try {
+            if (type == StringOptionalCommandParameter.class) {
+                val = new StringOptionalCommandParameter(value);
+            } else if (type == LongOptionalCommandParameter.class) {
+                val = new LongOptionalCommandParameter(Long.parseLong(value));
+            } else if (type == IntegerOptionalCommandParameter.class) {
+                val = new IntegerOptionalCommandParameter(Integer.parseInt(value));
+            } else if (type == FloatOptionalCommandParameter.class) {
+                val = new FloatOptionalCommandParameter(Float.parseFloat(value));
+            } else if (type == DoubleOptionalCommandParameter.class) {
+                val = new DoubleOptionalCommandParameter(Double.parseDouble(value));
+            } else {
+                throw SYNTAX_ERROR;
+            }
+        } catch (RedisCodecException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw SYNTAX_ERROR;
+        }
+        setValue(field, instance, val);
+        return true;
+    }
+
+    private static boolean parseValue(Object instance, ParameterField parameterField,
+                                      RedisCommand.Parameter parameter) {
         Field field = parameterField.field;
         Class<?> type = field.getType();
         ByteBuf buf = parameter.getHolder().content();
         String str = buf.toString(StandardCharsets.UTF_8);
-        Object val = str;
+        Object val;
         try {
-            if (type == long.class) {
+            if (type == String.class) {
+                val = str;
+            } else if (type == long.class) {
                 val = Long.parseLong(str);
             } else if (type == int.class) {
                 val = Integer.parseInt(str);
@@ -80,18 +169,35 @@ public class CommandUtil {
                 val = Float.parseFloat(str);
             } else if (type == double.class) {
                 val = Double.parseDouble(str);
+            } else {
+                throw SYNTAX_ERROR;
             }
+        } catch (RedisCodecException ex) {
+            throw ex;
         } catch (Exception ex) {
-            return false;
+            throw SYNTAX_ERROR;
         }
         setValue(field, instance, val);
         return true;
     }
 
+
+
     private static void setValue(Field field, Object obj, Object val) {
         try {
-            field.set(obj, val);
+            Method setter = SETTER_CACHE.computeIfAbsent(field, CommandUtil::getSetter);
+            setter.invoke(obj, val);
         } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    private static Method getSetter(Field field) {
+        Class<?> clazz = field.getDeclaringClass();
+        String name = field.getName();
+        try {
+            return clazz.getMethod("set" + name.substring(0, 1).toUpperCase() + name.substring(1), field.getType());
+        } catch (NoSuchMethodException ex) {
             throw new RuntimeException(ex);
         }
     }
@@ -102,10 +208,6 @@ public class CommandUtil {
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
-    }
-
-    private static boolean isEnough(int i, List<RedisCommand.Parameter> parameters, ParameterField.Type type) {
-        return parameters.size() - i >= type.parameterCount;
     }
 
     private static List<ParameterField> makeParameterFields(Class<?> clazz) {
@@ -119,11 +221,15 @@ public class CommandUtil {
             Class<?> fieldType = field.getType();
             int order = parameter.order();
             String name = parameter.value();
+            if (name.length() == 0) {
+                name = field.getName();
+            }
             ParameterField parameterField = new ParameterField(order, name, field);
             if (fieldType == EnumCommandParameter.class) {
                 parameterField.setEnumClass(parameter.enumClass());
                 parameterField.setType(parameter.enumRequired() ? REQUIRED_ENUM : ENUM);
-            } else if (fieldType == OptionalCommandParameter.class) {
+            } else if (fieldType == OptionalCommandParameter.class
+                    || OptionalCommandParameter.class.isAssignableFrom(fieldType)) {
                 parameterField.setType(OPTIONAL);
             } else {
                 parameterField.setType(VALUE);
@@ -143,41 +249,6 @@ public class CommandUtil {
             tempClazz = tempClazz.getSuperclass();
         } while (tempClazz != Object.class);
         return fields;
-    }
-
-    public static void main(String[] args) {
-        RedisCommand redisCommand = new RedisCommand(5);
-
-        ByteBuf key = Unpooled.wrappedBuffer("key".getBytes());
-        RedisCommand.Parameter keyParameter = new RedisCommand.Parameter(key.readableBytes());
-        redisCommand.addParameter(keyParameter);
-
-        ByteBuf value = Unpooled.wrappedBuffer("value".getBytes());
-        RedisCommand.Parameter valueParameter = new RedisCommand.Parameter(value.readableBytes());
-        redisCommand.addParameter(valueParameter);
-
-        ByteBuf ex = Unpooled.wrappedBuffer("ex".getBytes());
-        RedisCommand.Parameter exParameter = new RedisCommand.Parameter(ex.readableBytes());
-        redisCommand.addParameter(exParameter);
-
-        ByteBuf exValue = Unpooled.wrappedBuffer("10".getBytes());
-        RedisCommand.Parameter exValueParameter = new RedisCommand.Parameter(exValue.readableBytes());
-        redisCommand.addParameter(exValueParameter);
-
-        ByteBuf px = Unpooled.wrappedBuffer("px".getBytes());
-        RedisCommand.Parameter pxParameter = new RedisCommand.Parameter(px.readableBytes());
-        redisCommand.addParameter(pxParameter);
-
-        ByteBuf pxValue = Unpooled.wrappedBuffer("10000".getBytes());
-        RedisCommand.Parameter pxValueParameter = new RedisCommand.Parameter(pxValue.readableBytes());
-        redisCommand.addParameter(pxValueParameter);
-
-        ByteBuf nx = Unpooled.wrappedBuffer("nx".getBytes());
-        RedisCommand.Parameter nxParameter = new RedisCommand.Parameter(nx.readableBytes());
-        redisCommand.addParameter(nxParameter);
-
-
-        parse(redisCommand, SetCommand.class);
     }
 
     static class ParameterField {

@@ -8,13 +8,14 @@ import lombok.Getter;
 @Getter
 public class EnumCommandParameter<T extends Enum<T>> extends OptionalCommandParameter<T> {
 
-
-    public EnumCommandParameter(boolean present) {
-        super(present);
+    public EnumCommandParameter() {
+        super(null);
     }
 
-    public EnumCommandParameter(boolean present, T value) {
-        super(present, value);
+    @SuppressWarnings("unchecked")
+    public void setValue(Object e) {
+        this.present = e != null;
+        this.value = (T) e;
     }
 
 }

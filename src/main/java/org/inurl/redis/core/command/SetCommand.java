@@ -1,21 +1,23 @@
 package org.inurl.redis.core.command;
 
 import lombok.Getter;
+import lombok.Setter;
 
 /**
  * @author raylax
  */
 @Getter
+@Setter
 public class SetCommand extends AbstractCommand {
 
     @CommandParameter(order = 1)
     private String value;
 
     @CommandParameter(order = 2)
-    private OptionalCommandParameter<Long> ex;
+    private LongOptionalCommandParameter ex;
 
     @CommandParameter(order = 3)
-    private OptionalCommandParameter<Long> px;
+    private LongOptionalCommandParameter px;
 
     @CommandParameter(order = 4, enumClass = When.class)
     private EnumCommandParameter<When> when;
