@@ -5,6 +5,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 
@@ -18,6 +19,7 @@ public class SimpleDynamicStringTest {
         String expected = "sds";
         SimpleDynamicString sds = SimpleDynamicString.create(expected.toCharArray());
         assertEquals(expected, sds.toString());
+        assertEquals(expected.hashCode(), sds.hashCode());
     }
 
     @Test
@@ -84,6 +86,9 @@ public class SimpleDynamicStringTest {
         assertTrue(sds.compare(sds1));
         assertFalse(sds.compare(sds2));
         assertFalse(sds.compare(sds3));
+        assertEquals(sds, sds1);
+        assertNotEquals(sds, sds2);
+        assertNotEquals(sds, sds3);
     }
 
     @Test

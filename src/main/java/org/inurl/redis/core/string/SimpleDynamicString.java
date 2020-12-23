@@ -1,5 +1,6 @@
 package org.inurl.redis.core.string;
 
+import io.netty.handler.codec.CodecException;
 import org.inurl.redis.core.Constants;
 
 /**
@@ -44,11 +45,17 @@ public class SimpleDynamicString {
      */
     private char[] buf;
 
+    /**
+     * hash code
+     */
+    private int hash;
+
     private SimpleDynamicString(char[] data, int length) {
         free = 0;
         len = length;
         buf = new char[length];
         System.arraycopy(data, 0, buf, 0, length);
+        rehash();
     }
 
     private SimpleDynamicString(char[] data) {
@@ -95,6 +102,8 @@ public class SimpleDynamicString {
      */
     public void free() {
         buf = null;
+        len = 0;
+        rehash();
     }
 
     /**
@@ -111,6 +120,7 @@ public class SimpleDynamicString {
     public void clear() {
         len = 0;
         free = buf.length;
+        rehash();
     }
 
     /**
@@ -138,6 +148,7 @@ public class SimpleDynamicString {
         System.arraycopy(data, 0, this.buf, 0, length);
         this.len = length;
         this.free = 0;
+        rehash();
     }
 
     /**
@@ -161,6 +172,7 @@ public class SimpleDynamicString {
         this.buf = newBuf;
         this.len = length;
         this.free = 0;
+        rehash();
     }
 
     /**
@@ -181,15 +193,6 @@ public class SimpleDynamicString {
         return true;
     }
 
-    /**
-     * 检查长度
-     * @param length 长度
-     * @return 是否超过最大长度
-     */
-    public static boolean checkLength(int length) {
-        return length > MAX_CAPACITY;
-    }
-
     /*
      * 拼接
      */
@@ -203,12 +206,16 @@ public class SimpleDynamicString {
         System.arraycopy(data, 0, this.buf, this.len, length);
         this.len += length;
         this.free -= length;
+        rehash();
     }
 
     /*
      * 确保容量
      */
     private void ensureCapacity(int expectCapacity) {
+        if (expectCapacity > MAX_CAPACITY) {
+            throw new CodecException("ERR maximum length exceeded");
+        }
         int capacity = expectCapacity < MAX_FREE
                 ? expectCapacity * 2 // 如果实际长度小于1M扩容至二倍
                 : expectCapacity + MAX_FREE; // 否则扩容至实际长度+1M
@@ -226,4 +233,28 @@ public class SimpleDynamicString {
         }
         return new String(buf, 0, len);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        return this.compare((SimpleDynamicString) o);
+    }
+
+    @Override
+    public int hashCode() {
+        return hash;
+    }
+
+    private void rehash() {
+        int h = 0;
+        if (len > 0) {
+            char[] val = buf;
+            for (int i = 0; i < len; i++) {
+                h = 31 * h + val[i];
+            }
+        }
+        hash = h;
+    }
+
 }
