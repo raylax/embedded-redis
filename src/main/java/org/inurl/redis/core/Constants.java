@@ -1,5 +1,7 @@
 package org.inurl.redis.core;
 
+import io.netty.handler.codec.redis.FullBulkStringRedisMessage;
+import io.netty.handler.codec.redis.IntegerRedisMessage;
 import io.netty.handler.codec.redis.RedisCodecException;
 import io.netty.handler.codec.redis.RedisMessage;
 import io.netty.handler.codec.redis.SimpleStringRedisMessage;
@@ -26,8 +28,22 @@ public class Constants {
      */
     public static final int BYTES_GB = BYTES_BASE * BYTES_MB;
 
-    public static final RedisMessage REDIS_MESSAGE_OK = new SimpleStringRedisMessage("OK");
+    public static final RedisMessage MESSAGE_OK = new SimpleStringRedisMessage("OK");
 
-    public static final RedisCodecException SYNTAX_ERROR = new RedisCodecException("syntax error");
+    public static final RedisMessage MESSAGE_NULL_BULK = FullBulkStringRedisMessage.NULL_INSTANCE;
+
+
+    /**
+     * 不存在
+     */
+    public static final RedisMessage MESSAGE_NOT_EXISTS = new IntegerRedisMessage(-2);
+
+    /**
+     * 未设置TTL
+     */
+    public static final RedisMessage MESSAGE_TTL_NOT_SET = new IntegerRedisMessage(-1);
+
+
+    public static final RedisCodecException ERROR_SYNTAX = new RedisCodecException("syntax error");
 
 }

@@ -3,6 +3,7 @@ package org.inurl.redis.core.command;
 import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.redis.RedisCodecException;
 import lombok.Getter;
+import org.inurl.redis.core.string.SimpleDynamicString;
 import org.inurl.redis.server.codec.RedisCommand;
 
 import java.lang.reflect.Field;
@@ -16,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.inurl.redis.core.Constants.SYNTAX_ERROR;
+import static org.inurl.redis.core.Constants.ERROR_SYNTAX;
 import static org.inurl.redis.core.command.CommandUtil.ParameterField.Type.ENUM;
 import static org.inurl.redis.core.command.CommandUtil.ParameterField.Type.OPTIONAL;
 import static org.inurl.redis.core.command.CommandUtil.ParameterField.Type.REQUIRED_ENUM;
@@ -65,7 +66,7 @@ public class CommandUtil {
                 // 如果参数是必须或者是OPTIONAL并且参数数量等于1则抛出异常
                 if (type.isRequired() || (rights == -1 && type == OPTIONAL)) {
                     redisCommand.release();
-                    throw SYNTAX_ERROR;
+                    throw ERROR_SYNTAX;
                 }
                 continue;
             }
@@ -148,6 +149,12 @@ public class CommandUtil {
             return true;
         }
         String str = buf.toString(StandardCharsets.UTF_8);
+        // 这里应该可以优化为直接从byteBuf转成char[]
+        if (type == SimpleDynamicString.class) {
+            SimpleDynamicString sds = SimpleDynamicString.create(str);
+            setValue(field, instance, sds);
+            return true;
+        }
         Object val;
         try {
             if (type == String.class) {
@@ -161,12 +168,12 @@ public class CommandUtil {
             } else if (type == double.class) {
                 val = Double.parseDouble(str);
             } else {
-                throw SYNTAX_ERROR;
+                throw ERROR_SYNTAX;
             }
         } catch (RedisCodecException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw SYNTAX_ERROR;
+            throw ERROR_SYNTAX;
         }
         setValue(field, instance, val);
         return true;
@@ -190,6 +197,12 @@ public class CommandUtil {
             return true;
         }
         String value = parameterValue.string();
+        // 这里应该可以优化为直接从byteBuf转成char[]
+        if (type == SimpleDynamicString.class) {
+            SimpleDynamicString sds = SimpleDynamicString.create(value);
+            setValue(field, instance, new SdsOptionalCommandParameter(sds));
+            return true;
+        }
         OptionalCommandParameter<?> val;
         try {
             if (type == StringOptionalCommandParameter.class) {
@@ -203,12 +216,12 @@ public class CommandUtil {
             } else if (type == DoubleOptionalCommandParameter.class) {
                 val = new DoubleOptionalCommandParameter(Double.parseDouble(value));
             } else {
-                throw SYNTAX_ERROR;
+                throw ERROR_SYNTAX;
             }
         } catch (RedisCodecException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw SYNTAX_ERROR;
+            throw ERROR_SYNTAX;
         }
         setValue(field, instance, val);
         return true;
@@ -224,7 +237,7 @@ public class CommandUtil {
         EnumCommandParameter<?> ecp = newInstance(EnumCommandParameter.class);
         ecp.setValue(enumVal);
         if (!ecp.isPresent() && required) {
-            throw SYNTAX_ERROR;
+            throw ERROR_SYNTAX;
         }
         setValue(parameterField.field, instance, ecp);
         return ecp.isPresent();

@@ -15,10 +15,10 @@ public class TestSetCommand extends AbstractCommand {
     private ByteBuf value;
 
     @CommandParameter(order = 2)
-    private LongOptionalCommandParameter ex;
+    private IntegerOptionalCommandParameter ex;
 
     @CommandParameter(value = "px", order = 3)
-    private LongOptionalCommandParameter px1;
+    private IntegerOptionalCommandParameter px1;
 
     @CommandParameter(order = 4, enumClass = When.class)
     private EnumCommandParameter<When> when;

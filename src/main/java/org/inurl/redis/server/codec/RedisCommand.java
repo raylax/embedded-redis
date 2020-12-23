@@ -5,7 +5,9 @@ import io.netty.buffer.ByteBufHolder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author raylax
@@ -15,7 +17,7 @@ public class RedisCommand {
     /**
      * 命令名
      */
-    private String name;
+    private Name name;
 
     /**
      * 参数
@@ -31,19 +33,64 @@ public class RedisCommand {
     }
 
     public void setName(String name) {
-        this.name = name;
+        this.name = Name.of(name);
     }
 
     public void addParameter(Parameter parameter) {
         parameters.add(parameter);
     }
 
-    public String name() {
+    public Name name() {
         return name;
     }
 
     public List<Parameter> parameters() {
         return parameters;
+    }
+
+
+
+    public enum Name {
+        // 基本命令
+        COMMAND,
+        ECHO,
+        PING,
+        QUIT,
+        // string命令
+        APPEND,
+        BITCOUNT,
+        BITOP,
+        DECR,
+        DECRBY,
+        GET,
+        GETBIT,
+        GETRANGE,
+        GETSET,
+        INCR,
+        INCRBY,
+        INCRBYFLOAT,
+        MGET,
+        MSET,
+        MSETNX,
+        PSETEX,
+        SET,
+        SETBIT,
+        SETEX,
+        SETNX,
+        SETRANGE,
+        STRLEN,
+        ;
+        private static final Map<String, Name> CACHE = new HashMap<>();
+
+        static {
+            for (Name value : values()) {
+                CACHE.put(value.name(), value);
+            }
+        }
+
+        public static Name of(String name) {
+            return CACHE.get(name);
+        }
     }
 
     public static class Parameter {

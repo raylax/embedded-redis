@@ -14,7 +14,6 @@ import io.netty.handler.codec.redis.RedisDecoder;
 import io.netty.handler.codec.redis.RedisEncoder;
 import org.apache.log4j.BasicConfigurator;
 import org.inurl.redis.core.processor.CommandProcessorRegistry;
-import org.inurl.redis.core.processor.ConnectionCommandProcessor;
 import org.inurl.redis.server.codec.RedisAggregator;
 import org.inurl.redis.server.codec.RedisCommandHandler;
 import org.inurl.redis.uitl.Log;
@@ -58,7 +57,7 @@ public class RedisServer {
             bossGroup = new NioEventLoopGroup();
             workerGroup = new NioEventLoopGroup();
             ServerBootstrap bootstrap = new ServerBootstrap();
-            RedisCommandHandler redisCommandProcessor = new RedisCommandHandler(buildProcessorRegistry());
+            RedisCommandHandler redisCommandProcessor = new RedisCommandHandler(CommandProcessorRegistry.instance());
             bootstrap.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class)
                     .option(ChannelOption.SO_BACKLOG, SO_BACKLOG_VALUE)
@@ -84,12 +83,6 @@ public class RedisServer {
         }
     }
 
-    private CommandProcessorRegistry buildProcessorRegistry() {
-        CommandProcessorRegistry processorRegistry = new CommandProcessorRegistry();
-        processorRegistry.register(new ConnectionCommandProcessor());
-        return processorRegistry;
-    }
-
     public void stop() {
         try {
             channel.close().sync();
@@ -101,7 +94,7 @@ public class RedisServer {
     }
 
     public static void main(String[] args) {
-        new RedisServer().start();
+        new RedisServer(6378).start();
     }
 
 }

@@ -72,6 +72,15 @@ public class SimpleDynamicString {
     }
 
     /**
+     * 创建SDS字符串
+     * @param data 数据
+     * @return SDS
+     */
+    public static SimpleDynamicString create(String data) {
+        return new SimpleDynamicString(data.toCharArray());
+    }
+
+    /**
      * 空SDS
      * @return SDS
      */

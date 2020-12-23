@@ -66,12 +66,12 @@ public class CommandUtilTest {
         redisCommand.addParameter(nxParameter);
 
         TestSetCommand setCommand = CommandUtil.parse(redisCommand, TestSetCommand.class);
-        assertEquals("key", setCommand.getKey());
+        assertEquals("key", setCommand.getKey().toString());
         assertEquals("value", setCommand.getValue().toString(StandardCharsets.UTF_8));
         assertTrue(setCommand.getEx().isPresent());
-        assertEquals(Long.valueOf(10L), setCommand.getEx().getValue());
+        assertEquals(Integer.valueOf(10), setCommand.getEx().getValue());
         assertTrue(setCommand.getPx1().isPresent());
-        assertEquals(Long.valueOf(10000L), setCommand.getPx1().getValue());
+        assertEquals(Integer.valueOf(10000), setCommand.getPx1().getValue());
         assertEquals(TestSetCommand.When.NX, setCommand.getWhen().getValue());
 
     }

@@ -1,8 +1,8 @@
 package org.inurl.redis.core.command;
 
-import io.netty.buffer.ByteBuf;
 import lombok.Getter;
 import lombok.Setter;
+import org.inurl.redis.core.string.SimpleDynamicString;
 
 /**
  * @author raylax
@@ -12,13 +12,13 @@ import lombok.Setter;
 public class SetCommand extends AbstractCommand {
 
     @CommandParameter(order = 1)
-    private ByteBuf value;
+    private SimpleDynamicString value;
 
     @CommandParameter(order = 2)
-    private LongOptionalCommandParameter ex;
+    private IntegerOptionalCommandParameter ex;
 
     @CommandParameter(order = 3)
-    private LongOptionalCommandParameter px;
+    private IntegerOptionalCommandParameter px;
 
     @CommandParameter(order = 4, enumClass = When.class)
     private EnumCommandParameter<When> when;

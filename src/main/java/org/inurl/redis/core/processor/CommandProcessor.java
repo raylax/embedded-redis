@@ -13,7 +13,7 @@ public interface CommandProcessor {
     /**
      * 所有支持命令
      */
-    List<String> supportedCommands();
+    List<RedisCommand.Name> supportedCommands();
 
     /**
      * 处理请求
