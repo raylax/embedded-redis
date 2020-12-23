@@ -44,6 +44,7 @@ public class Constants {
     public static final RedisMessage MESSAGE_TTL_NOT_SET = new IntegerRedisMessage(-1);
 
 
-    public static final RedisCodecException ERROR_SYNTAX = new RedisCodecException("syntax error");
+    public static final RedisCodecException ERROR_SYNTAX = new RedisCodecException("ERR syntax error");
+    public static final RedisCodecException ERROR_WRONG_KIND = new RedisCodecException("ERR Operation against a key holding the wrong kind of value");
 
 }

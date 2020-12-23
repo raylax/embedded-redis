@@ -84,7 +84,7 @@ public abstract class AbstractData<V> {
         }
 
         public boolean isExpired() {
-            return ts() > value;
+            return !isNone() && ts() > value;
         }
 
         private static long ts() {
